@@ -36,23 +36,29 @@ class AdvertisementSerializer(serializers.ModelSerializer):
         # обратите внимание на `context` – он выставляется автоматически
         # через методы ViewSet.
         # само поле при этом объявляется как `read_only=True`
-        validated_data["creator"] = self.context["request"].user
-        return super().create(validated_data)
+        count_adver = Advertisement.objects.filter(creator=self.context["request"].user.id, status="OPEN").count()
+        if count_adver > 9:
+            raise ValidationError(f"У ВАС {count_adver} ОТКРЫТЫХ  ОБЬЯВЛЕНИЙ Закройте ОДНО из ниХ")
+        else:
+            validated_data["creator"] = self.context["request"].user
+
+            return super().create(validated_data)
 
     def validate(self, data):
         """Метод для валидации. Вызывается при создании и обновлении."""
         print(f"ВЫВОД из data {data}")
         print(f' {self.context["request"].user.id}')
-        count_adver= Advertisement.objects.filter(creator=self.context["request"].user.id, status="OPEN")
+        count_adver = Advertisement.objects.filter(creator=self.context["request"].user.id, status="OPEN").count()
 
 
-        i = 0
-        for _ in count_adver:
-            i+=1
 
-        print(f"У ВАС {i} открытых обьявлений" )
-        if i > 9:
-            raise ValidationError(f"У ВАС {i} ОТКРЫТЫХ  ОБЬЯВЛЕНИЙ")
+
+        print(f"У ВАС {count_adver} открытых обьявлений" )
+        if count_adver > 10:
+            list_id_adv = Advertisement.objects.filter(creator=self.context["request"].user.id, status="OPEN").first()
+            list_id_adv.status = "CLOSED"
+            list_id_adv.save()
+            raise ValidationError(f"У ВАС {count_adver} ОТКРЫТЫХ  ОБЬЯВЛЕНИЙ. ОБьявление  {list_id_adv.id} закрыто ")
 
 
 
